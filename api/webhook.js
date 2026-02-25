@@ -20,8 +20,8 @@ export default async function handler(req, res) {
 
     const body = req.body;
 
-    // Forward to Zapier (we'll paste URL later)
-    await fetch("PASTE_ZAPIER_WEBHOOK_HERE", {
+    // Forward to Zapier
+    await fetch("https://hooks.zapier.com/hooks/catch/26521683/u0udtb0/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
