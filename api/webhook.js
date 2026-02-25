@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   const VERIFY_TOKEN = "nil_dm_secret";
 
-  // Verification handshake
+  // --- Meta webhook verification (GET) ---
   if (req.method === "GET") {
     const mode = req.query["hub.mode"];
     const token = req.query["hub.verify_token"];
@@ -13,12 +13,32 @@ export default async function handler(req, res) {
     return res.status(403).send("Verification failed");
   }
 
+  // --- Incoming events (POST) ---
   if (req.method === "POST") {
     try {
-      const body = req.body;
+      // Read RAW request body safely
+      const rawBody = await new Promise((resolve, reject) => {
+        let data = "";
+        req.on("data", (chunk) => (data += chunk));
+        req.on("end", () => resolve(data));
+        req.on("error", reject);
+      });
 
-      console.log("✅ Incoming webhook body:", JSON.stringify(body));
+      // Log raw body for debugging (optional)
+      console.log("✅ Raw body:", rawBody);
 
+      // Parse JSON manually
+      let body;
+      try {
+        body = JSON.parse(rawBody);
+      } catch (e) {
+        console.error("❌ JSON parse failed. Raw body was:", rawBody);
+        return res.status(400).send("Invalid JSON received");
+      }
+
+      console.log("✅ Parsed body:", JSON.stringify(body));
+
+      // Forward to Zapier
       const zapierRes = await fetch("https://hooks.zapier.com/hooks/catch/26521683/u0udtb0/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -26,9 +46,7 @@ export default async function handler(req, res) {
       });
 
       const zapierText = await zapierRes.text();
-
-      console.log("➡️ Forwarded to Zapier. Status:", zapierRes.status);
-      console.log("➡️ Zapier response:", zapierText);
+      console.log("➡️ Forwarded to Zapier:", zapierRes.status, zapierText);
 
       return res.status(200).send("EVENT_RECEIVED");
     } catch (err) {
